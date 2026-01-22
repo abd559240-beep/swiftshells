@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator zod {
+  provider = "prisma-zod-generator"
+  output   = "../lib/prisma-zod/schemas"
+  config   = "./prisma-zod-generate.config.json"
+}
+
+model User {
+  id            String       @id @default(uuid()) @db.Uuid
+  name          String
+  email         String
+  emailVerified Boolean      @default(false)
+  image         String?
+  role          UserRoleEnum @default(USER)
+  displayRole   String?
+  banned        Boolean?     @default(false)
+  banReason     String?
+  banExpires    DateTime?
+  // relations
+  sessions      Session[]
+  accounts      Account[]
+  // timestamps
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([email])
+  @@map("users")
+}
+
+model Session {
+  id             String   @id @default(uuid()) @db.Uuid
+  expiresAt      DateTime
+  token          String
+  ipAddress      String?
+  userAgent      String?
+  impersonatedBy String?  @db.Uuid
+  // relations
+  userId         String   @db.Uuid
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // timestamps
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([token])
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id @default(uuid()) @db.Uuid
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  // relations
+  userId                String    @db.Uuid
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // timestamps
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id @default(uuid()) @db.Uuid
+  identifier String
+  value      String
+  expiresAt  DateTime
+  // timestamps
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verifications")
+}
+
+// Enums
+enum UserRoleEnum {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
